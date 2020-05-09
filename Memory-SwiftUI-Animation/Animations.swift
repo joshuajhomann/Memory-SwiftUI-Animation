@@ -51,11 +51,6 @@ struct BounceScaleAnimation: AnimatableModifier {
 struct HorizontalShakeAnimation: AnimatableModifier {
   var proportion: CGFloat
   var distance: CGFloat
-  private var adjustedProportion: CGFloat {
-    proportion < 0.5
-      ? 4 * proportion * .pi
-      : (1 - 2 * (proportion - 0.5)) * 2 * .pi
-  }
 
   var animatableData: CGFloat {
     get { proportion }
@@ -65,7 +60,7 @@ struct HorizontalShakeAnimation: AnimatableModifier {
   func body(content: Content) -> some View {
     content
       .transformEffect(.init(
-        translationX: sin(adjustedProportion * 3) * distance,
+        translationX: sin(proportion * 6 * .pi) * distance,
         y: 0)
       )
   }

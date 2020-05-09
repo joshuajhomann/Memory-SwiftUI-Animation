@@ -26,10 +26,12 @@ struct GameBoardPreferenceKey: PreferenceKey {
     var boardDimension: CGFloat = .zero
     var cardDimension: CGFloat = .zero
     var cardSpacing: CGFloat = .zero
+    var rowWidth: CGFloat = .zero
     init(boardDimension: CGFloat = .zero) {
       self.boardDimension = boardDimension
       cardDimension = boardDimension / CGFloat(GameModel.Constant.columns + 1)
       cardSpacing = cardDimension / CGFloat(GameModel.Constant.columns + 1)
+      rowWidth = cardDimension * CGFloat(GameModel.Constant.columns) + cardSpacing * CGFloat(GameModel.Constant.columns - 1)
     }
     func offset(for location: GameModel.Card.Location) -> CGSize {
       switch location {
@@ -40,7 +42,7 @@ struct GameBoardPreferenceKey: PreferenceKey {
           )
         case let .match(index):
           return .init(
-            width:  CGFloat(index) * cardDimension * 0.32 + cardSpacing,
+            width:  CGFloat(index) * rowWidth / CGFloat(14) + cardSpacing,
             height: CGFloat (GameModel.Constant.rows) * (cardDimension + cardSpacing) + cardSpacing
           )
         }

@@ -35,8 +35,8 @@ struct Card: View {
       scale: 1.25
     )
     .flipAnimation(
-      proportion: card.isRotated ? 1 : 0
-      , id: card.id
+      proportion: card.isRotated ? 1 : 0,
+      id: card.id
     )
     .onPreferenceChange(FlipPreferenceKey.self) {
       guard let value = $0[self.card.id] else { return }

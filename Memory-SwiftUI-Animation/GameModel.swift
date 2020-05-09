@@ -12,6 +12,7 @@ import Combine
 final class GameModel: ObservableObject {
   @Published var cards: [Card] = []
   @Published private (set) var flips = 0
+  @Published private (set) var matches = 0
   var nextTransaction: AnyPublisher<Transaction, Never> {
     transactionSubject.eraseToAnyPublisher()
   }
@@ -71,6 +72,7 @@ final class GameModel: ObservableObject {
       transactionSubject.send(.flipUpCard(index: index))
     case .reset:
       flips = 0
+      matches = 0
       isExecuting = false
       flippedCardIndex = nil
       lastMatchIndex = 0
@@ -92,7 +94,8 @@ final class GameModel: ObservableObject {
 
   private func apply(transaction: Transaction, thenWait delay: TimeInterval) {
     let nextTransaction: Transaction?
-    var beforeNextAction: (() -> Void)?
+    var beforeNextTransaction: (() -> Void)?
+    isExecuting = true
     switch transaction {
     case let .flipUpCard(index):
       cards[index].isRotated = true
@@ -110,7 +113,7 @@ final class GameModel: ObservableObject {
       cards[first].isShaking = true
       cards[second].isShaking = true
       nextTransaction = .flipDownCards(first: first, second: second)
-      beforeNextAction = { [weak self] in
+      beforeNextTransaction = { [weak self] in
         self?.cards[first].isShaking = false
         self?.cards[second].isShaking = false
       }
@@ -124,14 +127,14 @@ final class GameModel: ObservableObject {
       let end = [copy[first], copy[second]]
       cards = copy.filter { $0.id != copy[first].id && $0.id != copy[second].id } + end
       nextTransaction = .bounceMatches(
-        first: cards.firstIndex{ end[0].id == $0.id }!,
-        second: cards.firstIndex{ end[1].id == $0.id }!
+        first: cards.firstIndex{ end[0].id == $0.id } ?? 0,
+        second: cards.firstIndex{ end[1].id == $0.id } ?? 0
       )
     case let .bounceMatches(first, second):
       cards[first].isScaled = true
       cards[second].isScaled = true
       nextTransaction = .removeMatches(first: first, second: second)
-      beforeNextAction = { [weak self] in
+      beforeNextTransaction = { [weak self] in
         self?.cards[first].isScaled = false
         self?.cards[second].isScaled = false
       }
@@ -141,19 +144,20 @@ final class GameModel: ObservableObject {
       cards[second].location = .match(index: lastMatchIndex)
       lastMatchIndex += 1
       flippedCardIndex = nil
+      beforeNextTransaction = { [weak self] in
+        self?.matches += 1
+      }
       nextTransaction = nil
     }
 
-    if let nextAction = nextTransaction {
-      timerCancellable = Just(nextAction)
-        .delay(for: .seconds(delay), scheduler: DispatchQueue.main)
-        .sink(receiveValue: { [transactionSubject] transaction in
-          beforeNextAction?()
+    timerCancellable = Just(nextTransaction)
+      .delay(for: .seconds(delay), scheduler: DispatchQueue.main)
+      .sink(receiveValue: { [weak self, transactionSubject] transaction in
+        beforeNextTransaction?()
+        self?.isExecuting = false
+        if let transaction = transaction {
           transactionSubject.send(transaction)
-        })
-      isExecuting = true
-    } else {
-      isExecuting = false
-    }
+        }
+      })
   }
 }
